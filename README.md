@@ -1,73 +1,79 @@
-# Soroban DeFi Vault
+# Soroban DeFi Project
 
-A collateralized lending and borrowing vault built on the Soroban smart contract platform. This project allows users to deposit tokens as collateral and borrow against them, with liquidation mechanisms ensuring system solvency.
+A comprehensive collection of DeFi protocols built on the Soroban smart contract platform. This workspace contains modules for lending, automated market making (AMM), and decentralized governance.
 
-## Features
+## Contracts Overview
 
-- **Deposits & Withdrawals**: Securely deposit tokens to earn potential interest or build collateral.
-- **Collateralized Borrowing**: Borrow tokens against your deposited collateral based on a configurable collateral factor.
-- **Liquidation**: Automated liquidation threshold to protect the protocol from bad debt.
-- **Health Factor**: Real-time health factor calculation for user positions.
-- **Interest Rates**: Configurable interest rate model with base rate and multiplier (logic implemented in `interest.rs`).
+### 1. DeFi Vault (`contracts/vault`)
+A collateralized lending and borrowing protocol.
+- **Core Logic**: Manage user deposits, collateralized loans, and interest accrual.
+- **Safety**: Automated liquidation mechanisms based on health factor thresholds.
 
-## Project Structure
+### 2. Swap Pool (`contracts/swap_pool`)
+A constant product AMM (Automated Market Maker).
+- **Liquidity**: Add/Remove liquidity with proportional LP share emission.
+- **Swaps**: Swap Token A for Token B with a built-in 0.3% fee model.
+
+### 3. Governance (`contracts/governance`)
+A decentralized proposal and voting system.
+- **Democracy**: Proposal creation with configurable quorum and voting power snapshots.
+- **Automation**: On-chain execution of passed proposals.
+
+---
+
+## Detailed Project Structure
 
 ```text
 .
 ├── contracts
-│   └── vault
+│   ├── vault               # --- Lending & Borrowing Module ---
+│   │   ├── src
+│   │   │   ├── lib.rs      # Entry points (deposit, borrow, liquidate)
+│   │   │   ├── storage.rs  # Persistence keys (UserDeposit, TotalBorrows)
+│   │   │   ├── interest.rs # Dynamic interest rate modeling
+│   │   │   ├── events.rs   # Standardized event emissions
+│   │   │   ├── errors.rs   # Protocol-specific error codes
+│   │   │   └── test.rs     # Integration and unit tests
+│   │   └── Cargo.toml      # Contract configuration
+│   │
+│   ├── swap_pool           # --- AMM Swap Module ---
+│   │   ├── src
+│   │   │   ├── lib.rs      # Swap logic, liquidity management
+│   │   │   ├── storage.rs  # Reserve and Share storage keys
+│   │   │   ├── math.rs     # Square root and price impact calculations
+│   │   │   └── test.rs     # Constant product invariant tests
+│   │   └── Cargo.toml      # Contract configuration
+│   │
+│   └── governance          # --- Governance Module ---
 │       ├── src
-│       │   ├── lib.rs        # Main contract logic and entry points
-│       │   ├── storage.rs    # Data storage keys and structures
-│       │   ├── interest.rs   # Interest rate calculation logic
-│       │   ├── events.rs     # Event emission definitions
-│       │   ├── errors.rs     # Custom error types
-│       │   └── test.rs       # Contract tests
-│       ├── Cargo.toml        # Contract-specific configuration
-│       └── Makefile          # Build and test shortcuts
-├── Cargo.toml                # Workspace configuration
-└── README.md                 # Project documentation
+│       │   ├── lib.rs      # Proposal lifecycle and voting logic
+│       │   ├── storage.rs  # Proposal structs and snapshot keys
+│       │   └── test.rs     # Quorum and execution flow tests
+│       └── Cargo.toml      # Contract configuration
+│
+├── Cargo.toml              # Workspace dependency management
+└── README.md               # Main project documentation
 ```
+
+---
 
 ## Getting Started
 
 ### Prerequisites
-
-- [Rust](https://www.rust-lang.org/tools/install)
+- [Rust](https://www.rust-lang.org/tools/install) (target `thumbv7em-none-eabihf`)
 - [Stellar CLI](https://developers.stellar.org/docs/smart-contracts/getting-started/setup#install-the-stellar-cli)
 
 ### Build
-
-To build the contract, run:
-
+Build all contracts from the project root:
 ```bash
-cd contracts/vault
-cargo build --target thumv7em-none-eabihf --release
-```
-
-Or using the Makefile:
-
-```bash
-cd contracts/vault
-make build
+cargo build --target thumbv7em-none-eabihf --release
 ```
 
 ### Test
-
-To run the automated tests:
-
+Run the full test suite (15 passing tests expected):
 ```bash
-cd contracts/vault
 cargo test
 ```
 
-## Contract Initialization
-
-The vault needs to be initialized with several parameters:
-
-- **Admin**: The address with administrative privileges.
-- **Token Address**: The address of the Stellar Asset to be used in the vault.
-- **Base Rate**: The starting interest rate.
-- **Multiplier**: The rate at which interest increases with utilization.
-- **Collateral Factor**: Percentage of deposit that can be borrowed (e.g., 75 for 75%).
-- **Liquidation Threshold**: Percentage at which a position becomes eligible for liquidation (e.g., 85 for 85%).
+> [!TIP]
+> Each contract also has its own `src/test.rs` which can be executed individually by navigating to the contract directory and running `cargo test`.
