@@ -45,6 +45,9 @@ impl SwapPool {
         let token_a_client = token::Client::new(&env,&token_a);
         let token_b_client = token::Client::new(&env,&token_b);
 
+        token_a_client.transfer(&user, &env.current_contract_address(), &amount_a);
+        token_b_client.transfer(&user, &env.current_contract_address(), &amount_b);
+
         let shares;
 
         if total_shares == 0 {
@@ -96,18 +99,18 @@ impl SwapPool {
         let token_a_client = token::Client::new(&env,&token_a);
         let token_b_client = token::Client::new(&env,&token_b);
 
-        token_a_client.transfer(&env.current_contract_address(),&user,amount_a);
-        token_b_client.transfer(&env.current_contract_address(),&user,amount_b);
+        token_a_client.transfer(&env.current_contract_address(),&user,&amount_a);
+        token_b_client.transfer(&env.current_contract_address(),&user,&amount_b);
 
         env.storage().persistent().set(&user_key,&(user_share - shares));
 
         env.storage().instance().set(&DataKey::ReserveA ,&(reserve_a - amount_a));
         env.storage().instance().set(&DataKey::ReserveB, &(reserve_b - amount_b));
-        
+        env.storage().instance().set(&DataKey::TotalShares, &(total_shares - shares));
     }
 
     pub fn swap_a_for_b(env:Env,user:Address,amount_in:i128) -> i128{
-        user_require_auth();
+        user.require_auth();
         let token_a:Address = env.storage().instance().get(&DataKey::TokenA).unwrap();
         let token_b:Address = env.storage().instance().get(&DataKey::TokenB).unwrap();
 
@@ -117,11 +120,11 @@ impl SwapPool {
         let token_a_client = token::Client::new(&env,&token_a);
         let token_b_client = token::Client::new(&env,&token_b);
 
-        token_a_client.transfer(&user,&env.current_contract_address(),amount_in);
+        token_a_client.transfer(&user,&env.current_contract_address(),&amount_in);
 
         let amount_out = get_amount_out(amount_in, reserve_a, reserve_b);   
 
-        token_b_client.transfer(&env.current_contract_address(),&user,amount_out);
+        token_b_client.transfer(&env.current_contract_address(),&user,&amount_out);
 
         env.storage().instance().set(&DataKey::ReserveA,&(reserve_a + amount_in));
         env.storage().instance().set(&DataKey::ReserveB,&(reserve_b - amount_out));
@@ -134,6 +137,16 @@ impl SwapPool {
         let reserve_a:i128 = env.storage().instance().get(&DataKey::ReserveA).unwrap();
         let reserve_b:i128 = env.storage().instance().get(&DataKey::ReserveB).unwrap();
         (reserve_a,reserve_b)
-    
-    
-}   
+    }
+
+    pub fn get_share(env: Env, user: Address) -> i128 {
+        env.storage().persistent().get(&DataKey::Share(user)).unwrap_or(0)
+    }
+
+    pub fn get_total_shares(env: Env) -> i128 {
+        env.storage().instance().get(&DataKey::TotalShares).unwrap_or(0)
+    }
+}
+
+#[cfg(test)]
+mod test;
