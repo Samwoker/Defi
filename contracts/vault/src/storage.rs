@@ -1,15 +1,24 @@
 use soroban_sdk::{contracttype, Address};
+
 #[derive(Clone)]
 #[contracttype]
-
 pub enum DataKey {
+
     Admin,
+
+    Token,
+
     TotalDeposits,
     TotalBorrows,
+
     BaseRate,
     Multiplier,
+
     CollateralFactor,
+    LiquidationThreshold,
+
+    LastAccrualLedger,
+
     UserDeposit(Address),
     UserBorrow(Address),
-    LastAccrualLedger,
 }
