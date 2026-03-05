@@ -2,7 +2,7 @@
 
 mod storage;
 
-use soroban_sdk::{contract, contractimpl, Env, Address, Symbol, Vec};
+use soroban_sdk::{contract, contractimpl, Env, Address, String};
 use crate::storage::{DataKey, Proposal};
 
 #[contract]
@@ -39,29 +39,43 @@ pub fn propose(env: Env, proposer: Address, description: String, quorum: i128) -
 
     env.storage().instance().set(&DataKey::Proposal(count), &proposal);
 
-    // snapshot voting power
+    // Snapshot current voting power for the proposer (and potentially others if we had a list)
+    // For this simple implementation, we'll assume voting power is fixed or we use current power if no snapshot.
     let voting_power: i128 = env.storage().persistent().get(&DataKey::VotingPower(proposer.clone())).unwrap_or(0);
     env.storage().instance().set(&DataKey::Snapshot(count, proposer), &voting_power);
 
+    let id = count;
     count += 1;
     env.storage().instance().set(&DataKey::ProposalCount, &count);
 
-    count - 1
+    id
 }
 
 pub fn vote(env: Env, voter: Address, proposal_id: u32, support: bool) {
     voter.require_auth();
 
     // Check if already voted
-    let voted: Option<i128> = env.storage().persistent().get(&DataKey::ProposalVotes(proposal_id, voter.clone()));
-    if voted.is_some() {
+    let voted_key = DataKey::ProposalVotes(proposal_id, voter.clone());
+    if env.storage().persistent().has(&voted_key) {
         panic!("Already voted");
     }
 
     let mut proposal: Proposal = env.storage().instance().get(&DataKey::Proposal(proposal_id)).unwrap();
 
-    // Use snapshot for voting power
-    let voting_power: i128 = env.storage().instance().get(&DataKey::Snapshot(proposal_id, voter.clone())).unwrap_or(0);
+    if proposal.executed {
+        panic!("Proposal already executed");
+    }
+
+    // Try to get snapshot, fallback to current power if not snapshotted
+    let voting_power: i128 = env.storage().instance()
+        .get(&DataKey::Snapshot(proposal_id, voter.clone()))
+        .unwrap_or_else(|| {
+            env.storage().persistent().get(&DataKey::VotingPower(voter.clone())).unwrap_or(0)
+        });
+
+    if voting_power <= 0 {
+        panic!("No voting power");
+    }
 
     if support {
         proposal.vote_for += voting_power;
@@ -69,8 +83,7 @@ pub fn vote(env: Env, voter: Address, proposal_id: u32, support: bool) {
         proposal.vote_against += voting_power;
     }
 
-    env.storage().persistent().set(&DataKey::ProposalVotes(proposal_id, voter), &voting_power);
-
+    env.storage().persistent().set(&voted_key, &voting_power);
     env.storage().instance().set(&DataKey::Proposal(proposal_id), &proposal);
 }
 
@@ -84,6 +97,10 @@ pub fn execute(env: Env, proposal_id: u32) {
     let total_votes = proposal.vote_for + proposal.vote_against;
     if total_votes < proposal.quorum {
         panic!("Quorum not reached");
+    }
+
+    if proposal.vote_for <= proposal.vote_against {
+        panic!("Proposal did not pass");
     }
 
     proposal.executed = true;
@@ -100,3 +117,6 @@ pub fn get_voting_power(env: Env, user: Address) -> i128 {
 }
 
 }
+
+#[cfg(test)]
+mod test;
