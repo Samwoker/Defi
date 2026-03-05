@@ -60,13 +60,18 @@ A decentralized proposal and voting system.
 ## Getting Started
 
 ### Prerequisites
-- [Rust](https://www.rust-lang.org/tools/install) (target `thumbv7em-none-eabihf`)
+- [Rust](https://www.rust-lang.org/tools/install) (target `wasm32-unknown-unknown`)
 - [Stellar CLI](https://developers.stellar.org/docs/smart-contracts/getting-started/setup#install-the-stellar-cli)
 
 ### Build
-Build all contracts from the project root:
+To build all contracts, ensure you have the `wasm32-unknown-unknown` target installed:
 ```bash
-cargo build --target thumbv7em-none-eabihf --release
+rustup target add wasm32-unknown-unknown
+```
+
+Then build from the project root:
+```bash
+stellar contract build
 ```
 
 ### Test
